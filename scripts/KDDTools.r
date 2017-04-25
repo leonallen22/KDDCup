@@ -79,8 +79,31 @@ plotAvgTravelTime <- function(df)
         main = "Average Travel Time vs Date based on Route")
 }
 
+plotAvgTravelTimeByDay <- function(df) 
+{
+  qplot(wday, y = avg_travel_time, data = df, color = Route, geom = "jitter", 
+        xlab = "Day of Week (starting on Sunday)", ylab = "Avg. Travel Time (seconds)",
+        main = "Average Travel Time vs Date based on Route")
+}
+
 plotAvgVolume <- function(df)
 {
   qplot(time_window_pos, y = volume, data = df, color = Tollgate_And_Direction, geom = "smooth", 
         xlab = "Date/Time", ylab = "Avg. Volume", main = "Average Volume vs Date based on Tollgate Entry/Exit")
+}
+
+createTravelTimeModel <- function(df)
+{
+  model <- lm(avg_travel_time ~ length + yday + wday + time_of_day + 
+                Route + wind_speed + 
+                rel_humidity + is_holiday + is_working_day, data = df)
+  return(model)
+}
+
+createTravelVolumeModel <- function(df)
+{
+  model <- lm(volume ~ tollgate_id + direction + time_of_day + wday + yday + pressure 
+              + sea_pressure + temperature + rel_humidity + precipitation + is_holiday
+              + is_working_day, data = df)
+  return(model)
 }

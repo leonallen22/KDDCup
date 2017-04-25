@@ -30,7 +30,20 @@ setupTravelTime20Avg <- function(df)
 {
   df$time_window_pos <- strptime(str_sub(df$time_window, start = 2, end = 20), format = "%Y-%m-%d %H:%M:%S")
   df$time_window_num <- as.numeric(df$time_window_pos)
+  df$time_of_day <- (df$time_window_pos$hour * 60) + df$time_window_pos$min
   df$Route <- as.factor(paste("I", as.character(df$intersection_id), " -> T", as.character(df$tollgate_id), sep = ""))
+  df <- merge(df, trainRoutes, by = c("intersection_id", "tollgate_id"))
+  df <- within(df, rm(link_seq, time_window))
+  df$wday <- df$time_window_pos$wday
+  df$yday <- df$time_window_pos$yday
+  df$time_of_week <- df$time_of_day + (df$wday * 1440)
+  df$is_holiday <- ifelse(df$time_window_pos >= "2016-09-15" & df$time_window_pos < "2016-09-18", 1, 
+                          ifelse(df$time_window_pos >= "2016-10-1" & df$time_window_pos < "2016-10-8", 1, 0))
+  df$is_working_day <- ifelse(df$wday > 0 & df$wday < 6 & df$is_holiday == 0, 1, 0)
+  df$is_working_day <- ifelse(df$time_window_pos >= "2016-09-18" & df$time_window_pos < "2016-09-19", 1, df$is_working_day)
+  df$is_working_day <- ifelse(df$time_window_pos >= "2016-10-8" & df$time_window_pos < "2016-10-10", 1, df$is_working_day)
+  df$tollgate_id <- as.factor(df$tollgate_id)
+  df$wday <- as.factor(df$wday)
   return(df)
 }
 
@@ -38,7 +51,39 @@ setupVolume20Avg <- function(df)
 {
   df$time_window_pos <- strptime(str_sub(df$time_window, start = 2, end = 20), format = "%Y-%m-%d %H:%M:%S")
   df$time_window_num <- as.numeric(df$time_window_pos)
+  df$time_of_day <- (df$time_window_pos$hour * 60) + df$time_window_pos$min
   df$exiting <- ifelse(df$direction == 1, "exit", "entry")
   df$Tollgate_And_Direction <- as.factor(paste("T", as.character(df$tollgate_id), " - ", df$exiting, sep = ""))
+  df$wday <- df$time_window_pos$wday
+  df$yday <- df$time_window_pos$yday
+  df$time_of_week <- df$time_of_day + (df$wday * 1440)
+  df$tollgate_id <- as.factor(df$tollgate_id)
+  df$is_holiday <- ifelse(df$time_window_pos >= "2016-09-15" & df$time_window_pos < "2016-09-18", 1, 
+                          ifelse(df$time_window_pos >= "2016-10-1" & df$time_window_pos < "2016-10-8", 1, 0))
+  df$is_working_day <- ifelse(df$wday > 0 & df$wday < 6 & df$is_holiday == 0, 1, 0)
+  df$is_working_day <- ifelse(df$time_window_pos >= "2016-09-18" & df$time_window_pos < "2016-09-19", 1, df$is_working_day)
+  df$is_working_day <- ifelse(df$time_window_pos >= "2016-10-8" & df$time_window_pos < "2016-10-10", 1, df$is_working_day)
+  df$wday <- as.factor(df$wday)
   return(df)
+}
+
+setupWeatherTimeWindows <- function(df)
+{
+  df$time_window_pos <- as.POSIXlt(paste(as.character(df$date), as.character(df$hour)), format = "%Y-%m-%d %H")
+  n <- nrow(df)
+  twenty_min <- 1200
+  for (i in 1:n) {
+    curr_row <- df[i,]
+    for (t in 1:8) {
+      curr_row$time_window_pos <- curr_row$time_window_pos + twenty_min
+      df <- rbind(df, curr_row)
+    }
+  }
+  df$time_window_num <- as.numeric(df$time_window_pos)
+  return(within(df, rm(time_window_pos)))
+}
+
+mergeWeather <- function(train, weather) 
+{
+  return(merge(train, weather, by = c("time_window_num")))
 }
